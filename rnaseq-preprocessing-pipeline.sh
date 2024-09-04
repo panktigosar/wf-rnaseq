@@ -73,7 +73,8 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
     $FASTQC $TRIMMED_R1 $TRIMMED_R2 -o $OUTPUT_DIR/fastqc-trimmed
 
     # Step 4: Alignment
-    echo "Generating the genome files" 
+    # Uncomment the next block and run only if you do not have a genome build. If you have a genome build, no need to create one.
+    # echo "Generating the genome files" 
 
     # STAR --runThreadN 8 \
     #  --runMode genomeGenerate \
@@ -96,10 +97,11 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
     samtools flagstat $ALIGNMENT > $OUTPUT_DIR/reports/${base}_alignment_report.txt
 
     # Step 6: Consolidated Report
-    echo "Generating consolidated report..."
+    echo "Step 6: Generating consolidated report..."
     cat $OUTPUT_DIR/reports/*_alignment_report.txt > $OUTPUT_DIR/reports/consolidated_report.txt
 
     # Step 7: creating count matrix:
+    echo "Step 7: Generating count matrix file..."
     featureCounts -T 4 -p -s 2 -t exon -g gene_name -a $ANNOTATION -o $OUTPUT_DIR/endo_grch38v107_counts.txt $OUTPUT_DIR/alignments/*out.bam
 
     echo "All samples processed. Consolidated report is available at $OUTPUT_DIR/reports/consolidated_report.txt."
