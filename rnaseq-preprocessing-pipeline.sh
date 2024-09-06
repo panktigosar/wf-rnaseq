@@ -18,11 +18,13 @@ send_email_on_failure() {
 trap 'send_email_on_failure' ERR EXIT
 
 # Directories
-basepath="path to experiment directory"
+BASEPATH="path to experiment directory"
 INPUT_DIR="$basepath/rawData"
 OUTPUT_DIR="$basepath/output_files"
 GENOME_DIR="path to genome_dir/"
 ADAPTOR="$basepath/data_pre-processing/adaptor.fa"
+GENOME_INDEX="/nl/umw_jeanne_lawrence/ecl/grch38_107/HISAT2_index/grch38_snp_tran_wTETPURONEO/genome_snp_tran"
+GENOME_SS="/nl/umw_jeanne_lawrence/ecl/grch38_107/HISAT2_index/grch38_snp_tran_wTETPURONEO/genome.ss"
 ANNOTATION="path to annotation files"
 out_log="pipeline$(date +'%d-%B-%Y').log"
 
@@ -47,9 +49,9 @@ STAR="/share/pkg/star/2.7.10a/bin/STAR"
 
 # Loop through all the files in the input directory 
 for file in $INPUT_DIR/*_R1_001.fastq.gz; do 
-    base=$(basename $file "_R1_001.fastq.gz")
-    R1=${INPUT_DIR}/${base}_R1_001.fastq.gz
-    R2=${INPUT_DIR}/${base}_R2_001.fastq.gz
+    BASE=$(basename $file "_R1_001.fastq.gz")
+    R1=${INPUT_DIR}/${BASE}_R1_001.fastq.gz
+    R2=${INPUT_DIR}/${BASE}_R2_001.fastq.gz
     echo "Processing sample $base..."
 
     # Step 1: Quality check
@@ -58,19 +60,19 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
 
     # Step 2: Trimming
     echo "Step 2: Trimming the adaptors and low quality bases..."
-    TRIMMED_R1=$OUTPUT_DIR/trimmed/${base}_R1_trimmed_paired.fastq.gz
-    TRIMMED_R2=$OUTPUT_DIR/trimmed/${base}_R2_trimmed_paired.fastq.gz
-    UNPAIRED_R1=$OUTPUT_DIR/trimmed/${base}_R1_trimmed_unpaired.fastq.gz
-    UNPAIRED_R2=$OUTPUT_DIR/trimmed/${base}_R2_trimmed_unpaired.fastq.gz
+    TRIMMED_PAIRED_R1=$OUTPUT_DIR/trimmed/${base}_R1_trimmed_paired.fastq.gz
+    TRIMMED_PAIRED_R2=$OUTPUT_DIR/trimmed/${base}_R2_trimmed_paired.fastq.gz
+    TRIMMED_UNPAIRED_R1=$OUTPUT_DIR/trimmed/${base}_R1_trimmed_unpaired.fastq.gz
+    TRIMMED_UNPAIRED_R2=$OUTPUT_DIR/trimmed/${base}_R2_trimmed_unpaired.fastq.gz
 
     java -jar $TRIMMOMATIC PE -phred33 -threads 4 \
     $R1 $R2 \
-    $TRIMMED_R1 $UNPAIRED_R1 $TRIMMED_R2 $UNPAIRED_R2 \
+    $TRIMMED_PAIRED_R1 $TRIMMED_UNPAIRED_R1 $TRIMMED_PAIRED_R2 $TRIMMED_UNPAIRED_R2 \
     ILLUMINACLIP:${ADAPTOR}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
 
     # Step 3: Post-trimming Quality Check
     echo "Step 3: Running FastQC on trimmed data..."
-    $FASTQC $TRIMMED_R1 $TRIMMED_R2 -o $OUTPUT_DIR/fastqc-trimmed
+    $FASTQC $TRIMMED_PAIRED_R1 $TRIMMED_PAIRED_R2 -o $OUTPUT_DIR/fastqc-trimmed
 
     # Step 4: Alignment
     # Uncomment the next block and run only if you do not have a genome build. If you have a genome build, no need to create one.
@@ -86,16 +88,16 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
     echo "Step 4: Aligning reads to the reference genome..."
 
     # $STAR --runThreadN 4 --genomeDir $GENOME_DIR \
-    # --readFilesIn $TRIMMED_R1 $TRIMMED_R2 --readFilesCommand zcat \
-    # --outFileNamePrefix $OUTPUT_DIR/alignments/${base}_ \
+    # --readFilesIn $TRIMMED_PAIRED_R1 $TRIMMED_PAIRED_R2 --readFilesCommand zcat \
+    # --outFileNamePrefix $OUTPUT_DIR/alignments/${BASE}_ \
     # --outSAMtype BAM SortedByCoordinate
 
-    hisat2 -p 8 -x $genome_index --known-splicesite-infile $genome_ss --rna-strandness RF --sp 1,1 \
-	-1 $file_dir/${f}_R1.fastq.gz -2 $file_dir/${f}_R2.fastq.gz --summary-file $file_dir/mapped_files/${f}_summary.txt | \
+    hisat2 -p 8 -x $GENOME_INDEX --known-splicesite-infile $GENOME_SS --rna-strandness RF --sp 1,1 \
+	-1 $TRIMMED_PAIRED_R1 -2 $TRIMMED_PAIRED_R2 --summary-file $OUTPUT_DIR/alignments/${BASE}_summary.txt | \
 	samtools view -bS - | \
-	samtools sort - -o $file_dir/mapped_files/${f}_sorted.bam
+	samtools sort - -o $OUTPUT_DIR/alignments/${BASE}_Aligned.sortedByCoord.out.bam
  
-    ALIGNMENT=$OUTPUT_DIR/alignments/${base}_Aligned.sortedByCoord.out.bam
+    ALIGNMENT=$OUTPUT_DIR/alignments/${BASE}_Aligned.sortedByCoord.out.bam
 
     # Step 5: Post-alignment QC
     echo "Step 5: Generating alignment statistics..."
