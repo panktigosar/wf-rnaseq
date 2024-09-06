@@ -85,11 +85,16 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
 
     echo "Step 4: Aligning reads to the reference genome..."
 
-    $STAR --runThreadN 4 --genomeDir $GENOME_DIR \
-    --readFilesIn $TRIMMED_R1 $TRIMMED_R2 --readFilesCommand zcat \
-    --outFileNamePrefix $OUTPUT_DIR/alignments/${base}_ \
-    --outSAMtype BAM SortedByCoordinate
+    # $STAR --runThreadN 4 --genomeDir $GENOME_DIR \
+    # --readFilesIn $TRIMMED_R1 $TRIMMED_R2 --readFilesCommand zcat \
+    # --outFileNamePrefix $OUTPUT_DIR/alignments/${base}_ \
+    # --outSAMtype BAM SortedByCoordinate
 
+    hisat2 -p 8 -x $genome_index --known-splicesite-infile $genome_ss --rna-strandness RF --sp 1,1 \
+	-1 $file_dir/${f}_R1.fastq.gz -2 $file_dir/${f}_R2.fastq.gz --summary-file $file_dir/mapped_files/${f}_summary.txt | \
+	samtools view -bS - | \
+	samtools sort - -o $file_dir/mapped_files/${f}_sorted.bam
+ 
     ALIGNMENT=$OUTPUT_DIR/alignments/${base}_Aligned.sortedByCoord.out.bam
 
     # Step 5: Post-alignment QC
