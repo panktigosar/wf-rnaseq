@@ -23,8 +23,8 @@ INPUT_DIR="$basepath/rawData"
 OUTPUT_DIR="$basepath/output_files"
 GENOME_DIR="path to genome_dir/"
 ADAPTOR="$basepath/data_pre-processing/adaptor.fa"
-GENOME_INDEX="/nl/umw_jeanne_lawrence/ecl/grch38_107/HISAT2_index/grch38_snp_tran_wTETPURONEO/genome_snp_tran"
-GENOME_SS="/nl/umw_jeanne_lawrence/ecl/grch38_107/HISAT2_index/grch38_snp_tran_wTETPURONEO/genome.ss"
+GENOME_INDEX="path to genome build index/genome_snp_tran"
+GENOME_SS="path to genome build index/genome.ss"
 ANNOTATION="path to annotation files"
 out_log="pipeline$(date +'%d-%B-%Y').log"
 
@@ -96,6 +96,12 @@ for file in $INPUT_DIR/*_R1_001.fastq.gz; do
 	-1 $TRIMMED_PAIRED_R1 -2 $TRIMMED_PAIRED_R2 --summary-file $OUTPUT_DIR/alignments/${BASE}_summary.txt | \
 	samtools view -bS - | \
 	samtools sort - -o $OUTPUT_DIR/alignments/${BASE}_Aligned.sortedByCoord.out.bam
+
+    # Run the following code, only if you have not trimmed your files
+    # hisat2 -p 8 --trimed -x $GENOME_INDEX --known-splicesite-infile $GENOME_SS --rna-strandness RF --sp 1,1 \
+	# -1 $R1 -2 $R2 --summary-file $OUTPUT_DIR/alignments/${BASE}_summary.txt | \
+	# samtools view -bS - | \
+	# samtools sort - -o $OUTPUT_DIR/alignments/${BASE}_Aligned.sortedByCoord.out.bam
  
     ALIGNMENT=$OUTPUT_DIR/alignments/${BASE}_Aligned.sortedByCoord.out.bam
 
